@@ -1,130 +1,91 @@
 let read_lines file =
   let contents = In_channel.with_open_bin file In_channel.input_all in
-  String.split_on_char '\n' contents
+  String.split_on_char '\n' (String.trim contents)
 
-;;
-
-let is_digit = function '0' .. '9' -> true | _ -> false
-let _is_symbol = function '0'.. '9' -> false | '.' -> false | _ -> true
-let is_gear = function '*' -> true | _ -> false
-
-;;
-
-let extract_values rows predicate =
-  let extract_values_from_row row row_index =
-    let rec extract_value chars col_index current_value acc =
-      match chars with
-      | [] -> 
-          (match current_value with
-          | Some (value, cols) -> (value, row_index, List.rev cols) :: acc
-          | None -> acc)
-      | hd :: tl ->
-          if predicate hd then
-            let new_value, cols = 
-              match current_value with
-              | Some (value, cols) -> (value ^ (Char.escaped hd), col_index :: cols)
-              | None -> (Char.escaped hd, [col_index])
-            in
-            extract_value tl (col_index + 1) (Some (new_value, cols)) acc
-          else
-            (match current_value with
-            | Some (value, cols) -> extract_value tl (col_index + 1) None ((value, row_index, List.rev cols) :: acc)
-            | None -> extract_value tl (col_index + 1) None acc)
-    in
-    let chars = String.to_seq row |> List.of_seq in
-    extract_value chars 0 None [] in
-  
-  let rec extract_values_from_rows rows row_index acc =
-    match rows with
-    | [] -> acc
-    | hd :: tl ->
-        let values_in_row = extract_values_from_row hd row_index in
-        extract_values_from_rows tl (row_index + 1) (values_in_row @ acc)
+let read_numbers_between line ?(stop_char = None) start_char =
+  let start_index = String.index line start_char in
+  let stop_index =
+    match stop_char with
+    | Some stop -> String.index_from line (start_index + 1) stop
+    | None -> String.length line
   in
-
-  extract_values_from_rows rows 0 []
-
-;;
-
-let is_adjacent (row1, cols1) (row2, cols2) =
-  let dx = abs (row1 - row2) in
-  let dy = List.fold_left min max_int (List.map (fun col1 ->
-    List.fold_left min max_int (List.map (fun col2 ->
-      abs (col1 - col2)
-    ) cols2)
-  ) cols1) in
-  dx <= 1 && dy <= 1
-
-let _extract_adjacent_numbers symbols numbers =
-  let adjacent_numbers = ref [] in
-
-  let rec extract_adjacent_numbers_for_symbol symbol_positions =
-    match symbol_positions with
-    | [] -> ()
-    | (_, row, cols) :: rest ->
-        let nearby_numbers = List.filter (fun (_, num_row, num_cols) ->
-          is_adjacent (row, cols) (num_row, num_cols)
-        ) numbers in
-        adjacent_numbers := nearby_numbers @ !adjacent_numbers;
-        extract_adjacent_numbers_for_symbol rest
+  let numbers_string =
+    String.trim
+      (String.sub line (start_index + 1) (stop_index - start_index - 1))
   in
+  let number_strings = Str.split (Str.regexp " +") numbers_string in
+  List.map int_of_string number_strings
 
-  extract_adjacent_numbers_for_symbol symbols;
-  !adjacent_numbers
+module IntSet = Set.Make (struct
+  type t = int
 
-;;
+  let compare = compare
+end)
 
-let find_adjacent_numbers symbols numbers =
-  let find_adjacent_numbers_for_symbol (_, row, cols) =
-    List.filter (fun (_, num_row, num_cols) ->
-      is_adjacent (row, cols) (num_row, num_cols)
-    ) numbers
-  in
+let list_to_set lst =
+  List.fold_left (fun set element -> IntSet.add element set) IntSet.empty lst
 
-  List.map (fun symbol_position ->
-    let symbol_numbers = find_adjacent_numbers_for_symbol symbol_position in
-    symbol_numbers
-  ) symbols
+let find_common_elements sublist mainlist =
+  let subset_set = list_to_set sublist in
+  let mainlist_set = list_to_set mainlist in
+  let common_set = IntSet.inter subset_set mainlist_set in
+  IntSet.elements common_set
 
-;;
-
-let file_name = "part2/question.txt"
-let () =
-  let lines = read_lines file_name in
-  let numbers = extract_values lines is_digit in
+let get_line_score line =
+  let my_numbers = read_numbers_between line ':' ~stop_char:(Some '|') in
+  let winning_numbers = read_numbers_between line '|' in
+  let my_winning_numbers = find_common_elements winning_numbers my_numbers in
 
   (* PART 2 *)
-  let gears = extract_values lines is_gear in
-  let adjacent_numbers = find_adjacent_numbers gears numbers in
-  let gear_ratios = List.filter (fun numbers ->
-    List.length numbers = 2
-  ) adjacent_numbers in
+  List.length my_winning_numbers
 
-  List.iter (fun numbers ->
-    List.iter (fun (value, _, _) -> print_string (value ^ " ")) numbers;
-    print_endline ""
-  ) gear_ratios;
+(* PART 1  *)
+(* match List.length my_winning_numbers with *)
+(* | 0 -> 0 *)
+(* | 1 -> 1 *)
+(* | _ -> Int.pow 2 (List.length my_winning_numbers - 1) *)
 
-  let values = List.map (fun numbers ->
-    List.map (fun (value, _, _) ->  int_of_string value) numbers
-  ) gear_ratios in
+let add_to_nth_index lst_ref n total =
+  let rec aux i = function
+    | [] -> []
+    | x :: xs -> if i = 0 then (x + total) :: xs else x :: aux (i - 1) xs
+  in
+  let current_list = !lst_ref in
+  let updated_list = aux n current_list in
+  lst_ref := updated_list
 
-  let multiples = List.map (fun numbers ->
-    List.fold_left (fun acc num -> acc * num) 1 numbers
-  ) values in
+(* Copies of scratchcards are scored like normal scratchcards and have the same *)
+(* card number as the card they copied. So, if you win a copy of card 10 and it *)
+(* has 5 matching numbers, it would then win a copy of the same cards that the *)
+(* original card 10 won: cards 11, 12, 13, 14, and 15. This process repeats until *)
+(* none of the copies cause you to win any more cards. (Cards will never make you *)
+(* copy a card past the end of the table.) *)
+let process_scores scores =
+  let card_counts = ref (List.map (fun _ -> 1) scores) in
 
-  let sum = List.fold_left (+) 0 multiples in
-  print_endline ("Total sum: " ^ (string_of_int sum));
+  for i = 0 to List.length scores - 1 do
+    let card_count = List.nth !card_counts i in
+    let score = List.nth scores i in
+    for j = i + 1 to score + i do
+      add_to_nth_index card_counts j card_count
+    done
+  done;
 
+  List.fold_left (fun acc score -> acc + score) 0 !card_counts
 
-  (* PART 1 *)
-  (* let symbols = extract_values lines is_gear in *)
-  (* let adjacent_numbers = _extract_adjacent_numbers symbols numbers in *)
-  (**)
-  (* let sorted_numbers = List.sort (fun (_, row1, _) (_, row2, _) -> compare row1 row2) adjacent_numbers in *)
-  (* List.iter (fun (value, row, cols) -> *)
-  (*   Printf.printf("Value: %s, Row: %d, Cols: [%s]\n") value row (String.concat ", " (List.map string_of_int cols)) *)
-  (* ) sorted_numbers; *)
-  (**)
-  (* let sum = List.fold_left (fun acc (value, _, _) -> acc + int_of_string value) 0 adjacent_numbers in *)
-  (* print_endline ("Total sum: " ^ (string_of_int sum)) *)
+let () =
+  let file_name = "part2/question.txt" in
+  let lines = read_lines file_name in
+  let scores = List.map get_line_score lines in
+
+  List.iter
+    (fun score -> print_endline ("Score: " ^ string_of_int score))
+    scores;
+
+  (* PART 2 *)
+  let total_score = process_scores scores in
+  print_endline ("Total score: " ^ string_of_int total_score)
+
+(* PART 1 *)
+(* let total_score = List.fold_left (fun acc score -> acc + score) 0 scores in *)
+(* print_endline ("Total score: " ^ string_of_int total_score) *)
