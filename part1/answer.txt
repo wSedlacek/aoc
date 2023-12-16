@@ -1,0 +1,181 @@
+seed: 5844012
+seed-to-soil 2735666402
+soil-to-fertilizer 3285684146
+fertilizer-to-water 1494404667
+water-to-light 3316329223
+light-to-temperature 4047860789
+temperature-to-humidity 4047860789
+humidity-to-location 4217167942
+---
+seed: 110899473
+seed-to-soil 2840721863
+soil-to-fertilizer 1897227649
+fertilizer-to-water 3517164697
+water-to-light 2090766680
+light-to-temperature 4254909717
+temperature-to-humidity 4135623259
+humidity-to-location 1619680200
+---
+seed: 1132285750
+seed-to-soil 3426553621
+soil-to-fertilizer 3361682440
+fertilizer-to-water 1570402961
+water-to-light 3392327517
+light-to-temperature 3879033928
+temperature-to-humidity 1153467296
+humidity-to-location 1230040740
+---
+seed: 58870036
+seed-to-soil 2788692426
+soil-to-fertilizer 3338710170
+fertilizer-to-water 1547430691
+water-to-light 3369355247
+light-to-temperature 3856061658
+temperature-to-humidity 1130495026
+humidity-to-location 1207068470
+---
+seed: 986162929
+seed-to-soil 3280430800
+soil-to-fertilizer 2849630923
+fertilizer-to-water 2430993569
+water-to-light 2333026939
+light-to-temperature 3334793292
+temperature-to-humidity 3935687364
+humidity-to-location 4104994517
+---
+seed: 109080640
+seed-to-soil 2838903030
+soil-to-fertilizer 1895408816
+fertilizer-to-water 3515345864
+water-to-light 2088947847
+light-to-temperature 4253090884
+temperature-to-humidity 4133804426
+humidity-to-location 1617861367
+---
+seed: 3089574276
+seed-to-soil 1661689752
+soil-to-fertilizer 1661689752
+fertilizer-to-water 2991468338
+water-to-light 1364051693
+light-to-temperature 1790360362
+temperature-to-humidity 1313289031
+humidity-to-location 1839010340
+---
+seed: 100113624
+seed-to-soil 2829936014
+soil-to-fertilizer 1886441800
+fertilizer-to-water 3506378848
+water-to-light 2079980831
+light-to-temperature 4244123868
+temperature-to-humidity 4124837410
+humidity-to-location 1608894351
+---
+seed: 2693179996
+seed-to-soil 1265295472
+soil-to-fertilizer 250837964
+fertilizer-to-water 250837964
+water-to-light 579716438
+light-to-temperature 3596877682
+temperature-to-humidity 2670780592
+humidity-to-location 2840087745
+---
+seed: 275745330
+seed-to-soil 1937135555
+soil-to-fertilizer 3892577828
+fertilizer-to-water 4182736290
+water-to-light 2956358949
+light-to-temperature 472959747
+temperature-to-humidity 1938643605
+humidity-to-location 2107950758
+---
+seed: 2090752257
+seed-to-soil 662867733
+soil-to-fertilizer 1224604255
+fertilizer-to-water 2826685969
+water-to-light 1199269324
+light-to-temperature 1625577993
+temperature-to-humidity 1747687106
+humidity-to-location 1916994259
+---
+seed: 201704169
+seed-to-soil 1863094394
+soil-to-fertilizer 3818536667
+fertilizer-to-water 4108695129
+water-to-light 2882317788
+light-to-temperature 408383013
+temperature-to-humidity 1874066871
+humidity-to-location 2043374024
+---
+seed: 502075018
+seed-to-soil 2163465243
+soil-to-fertilizer 4118907516
+fertilizer-to-water 3199454925
+water-to-light 1706613991
+light-to-temperature 3206400971
+temperature-to-humidity 3807295043
+humidity-to-location 3976602196
+---
+seed: 396653347
+seed-to-soil 2058043572
+soil-to-fertilizer 4013485845
+fertilizer-to-water 3094033254
+water-to-light 1466616609
+light-to-temperature 1892925278
+temperature-to-humidity 1415853947
+humidity-to-location 1317782839
+---
+seed: 1540050181
+seed-to-soil 112165657
+soil-to-fertilizer 1126057394
+fertilizer-to-water 1126057394
+water-to-light 2655507409
+light-to-temperature 3079772691
+temperature-to-humidity 2505770059
+humidity-to-location 2675077212
+---
+seed: 277513792
+seed-to-soil 1938904017
+soil-to-fertilizer 3894346290
+fertilizer-to-water 4184504752
+water-to-light 2958127411
+light-to-temperature 474728209
+temperature-to-humidity 1940412067
+humidity-to-location 2109719220
+---
+seed: 1921754120
+seed-to-soil 493869596
+soil-to-fertilizer 756680299
+fertilizer-to-water 624429551
+water-to-light 489039180
+light-to-temperature 328103339
+temperature-to-humidity 217191348
+humidity-to-location 825516882
+---
+seed: 26668991
+seed-to-soil 2756491381
+soil-to-fertilizer 3306509125
+fertilizer-to-water 1515229646
+water-to-light 3337154202
+light-to-temperature 4068685768
+temperature-to-humidity 4181084852
+humidity-to-location 1665141793
+---
+seed: 3836386950
+seed-to-soil 3980430486
+soil-to-fertilizer 2079048695
+fertilizer-to-water 3698985743
+water-to-light 4192478912
+light-to-temperature 1503155952
+temperature-to-humidity 1625265065
+humidity-to-location 1527193957
+---
+seed: 66795009
+seed-to-soil 2796617399
+soil-to-fertilizer 1853123185
+fertilizer-to-water 3473060233
+water-to-light 2046662216
+light-to-temperature 2756393192
+temperature-to-humidity 866769172
+humidity-to-location 866769172
+---
+lowest location: 825516882
