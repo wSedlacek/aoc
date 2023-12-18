@@ -1,134 +1,89 @@
 import Foundation
 
-extension Array {
-  func chunked(into size: Int) -> [[Element]] {
-    return stride(from: 0, to: count, by: size).map {
-      Array(self[$0..<Swift.min($0 + size, count)])
-    }
-  }
-}
-
-let path = "part1/question.txt"
+let path = "part2/question.txt"
 let contents = try String(contentsOfFile: path, encoding: .utf8)
-let blocks = contents.components(separatedBy: "\n\n").map {
-  $0.trimmingCharacters(in: .whitespacesAndNewlines)
+
+// Input format:
+// Time:      7  15   30
+// Distance:  9  40  200
+
+// Longer input format:
+// Time:        61     67     75     71
+// Distance:   430   1036   1307   1150
+
+let lines = contents.components(separatedBy: "\n")
+var timeColumns = lines[0].trimmingCharacters(in: .whitespaces).components(separatedBy: "  ")
+var distanceColumns = lines[1].trimmingCharacters(in: .whitespaces).components(separatedBy: "  ")
+
+// Remove the "Time:" and "Distance:" headers
+timeColumns.removeFirst()
+distanceColumns.removeFirst()
+
+// Remove empty spaces
+timeColumns = timeColumns.filter { !$0.isEmpty }
+distanceColumns = distanceColumns.filter { !$0.isEmpty }
+
+// Trime whitespace
+timeColumns = timeColumns.map { $0.trimmingCharacters(in: .whitespaces) }
+distanceColumns = distanceColumns.map { $0.trimmingCharacters(in: .whitespaces) }
+
+let times = timeColumns.map { Int($0) }
+let distances = distanceColumns.map { Int($0) }
+
+// Units are in milliseconds and millimeters
+let races = zip(distances, times).map { distance, time in
+  (totalRaceTime: time, distanceRecord: distance)
 }
 
-let seeds = blocks[0]
-  .replacingOccurrences(of: "seeds: ", with: "")
-  .components(separatedBy: " ")
-  .map { Int($0)! }
-let seedRanges = seeds.chunked(into: 2).map { (seed_start: $0[0], seed_end: $0[0] + $0[1]) }
+print("\(races)")
 
-typealias Rule = (destinationRangeStart: Int, sourceRangeStart: Int, rangeLength: Int)
+var allWaysToBeatRecord = 1
+for race in races {
+  // For each race I can spend time at the start of the race holding down the
+  // button to charge up my speed. I increase in speed by 1 millimeter per
+  // second for each millisecond of time the button is held. When I release the
+  // button I travel at that speed until the end of the race.
 
-let almanac: [[Rule]] = blocks[1...].map { block in
-  let lines = block.components(separatedBy: "\n")
-  return lines[1...].map { line in
-    let components = line.components(separatedBy: " ").compactMap(Int.init)
+  // If I hold down the button for 5 milliseconds, I'll be going 5 millimeters
+  // but if the race is only 7 milliseconds long, I'll only travel 10 millimeters
+  // in the remaining 2 milliseconds.
 
-    return (
-      destinationRangeStart: components[0],
-      sourceRangeStart: components[1],
-      rangeLength: components[2]
-    )
+  // So the disntance I go is the multiplication of the time I hold down the
+  // button and the time I travel at that speed. The length of time I can hold
+  // added up with the remaining time is the total sum of the race time. So I
+  // could hold for 1 millisecond and travel for 6 milliseconds or hold for 2
+  // milliseconds and travel for 5 milliseconds.
+
+  // I have a distance record I need to beat for each race. I need to figure out
+  // how many different ways I can hold down the button to beat the record.
+
+  // Maybe I can start at this record and finding the number of ways to beat it
+
+  // Assume totalRaceTime and distanceRecord are optional Ints
+  guard let totalRaceTime = race.totalRaceTime, totalRaceTime > 0 else {
+    print("Invalid or missing total race time for race: \(race).")
+    continue
   }
-}
 
-let reversedAlmanac = Array(almanac.reversed())
-
-@inline(__always)
-func applyRule(rule: Rule, location: Int) -> Int? {
-  if rule.sourceRangeStart <= location && rule.sourceRangeStart + rule.rangeLength > location {
-    return rule.destinationRangeStart + (location - rule.sourceRangeStart)
+  guard let distanceRecord = race.distanceRecord else {
+    print("Invalid or missing distance record for race: \(race).")
+    continue
   }
 
-  return nil
-}
+  var waysToBeatRecord = 0
 
-@inline(__always)
-func inverseRule(rule: Rule, possibleSeed: Int) -> Int? {
-  if rule.destinationRangeStart <= possibleSeed
-    && rule.destinationRangeStart + rule.rangeLength > possibleSeed
-  {
-    return rule.sourceRangeStart + (possibleSeed - rule.destinationRangeStart)
-  }
+  for holdTime in 0...totalRaceTime {
+    let speed = holdTime
+    let travelTime = totalRaceTime - holdTime
+    let distanceCovered = speed * travelTime
 
-  return nil
-}
-
-/// This just processes the rules as writte, each seed goes through the rules
-/// to get it's location then they are all passed through a min
-
-func followSeeds() -> Int {
-  let locations = seeds.map { seed in
-    let location = almanac.reduce(seed) { (location, rules) in
-      for rule in rules {
-        if let newLocation = applyRule(rule: rule, location: location) {
-          return newLocation
-        }
-      }
-
-      return location
+    if distanceCovered > distanceRecord {
+      waysToBeatRecord += 1
     }
-
-    return location
   }
 
-  let lowestLocation = locations.min()!
-  return lowestLocation
+  print("Ways to beat record: \(waysToBeatRecord)")
+  allWaysToBeatRecord *= waysToBeatRecord
 }
 
-/// This uses a revers lookup where we start with a possible location then
-/// process it backwards to see if it is a range of seeds.
-
-@inline(__always)
-func checkLocation(possibleLocation: Int) -> Bool {
-
-  // while loop is faster than reduce and for-in (required for processing this much data)
-  var possibleSeed = possibleLocation
-  var almanacIndex = 0
-  while almanacIndex < reversedAlmanac.count {
-    let rules = reversedAlmanac[almanacIndex]
-
-    var ruleIndex = 0
-    while ruleIndex < rules.count {
-      if let newLocation = inverseRule(rule: rules[ruleIndex], possibleSeed: possibleSeed) {
-        possibleSeed = newLocation
-        break
-      }
-
-      ruleIndex += 1
-    }
-
-    almanacIndex += 1
-  }
-
-  return seedRanges.contains(where: {
-    return possibleSeed >= $0.seed_start && possibleSeed <= $0.seed_end
-  })
-}
-
-func checkAllLocations(start: Int = 0) -> Int? {
-  var lowestLocation: Int? = nil
-  var posibleLocation = start
-
-  while true {
-    if checkLocation(possibleLocation: posibleLocation) {
-      lowestLocation = posibleLocation
-      break
-    }
-
-    if posibleLocation % 100000 == 0 {
-      print("checked \(posibleLocation)")
-    }
-
-    posibleLocation += 1
-  }
-
-  return lowestLocation
-}
-
-// let lowestLocation = followSeeds()
-let lowestLocation = checkAllLocations()
-print("lowest location: \(lowestLocation!)")
+print("All ways to beat record: \(allWaysToBeatRecord)")
