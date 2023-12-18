@@ -1,89 +1,188 @@
 import Foundation
 
+// Camel Cards! - Poker, but easier to play while riding camels.
+
+// Possible cards are: A, K, Q, J, T, 9, 8, 7, 6, 5, 4, 3, or 2.
+// A is the highest and 2 is the lowest.
+
+// We eed an enum that is comparable for each card label
+
+enum CardLabel: String, Comparable {
+  case A = "A"
+  case K = "K"
+  case Q = "Q"
+  case J = "J"
+  case T = "T"
+  case nine = "9"
+  case eight = "8"
+  case seven = "7"
+  case six = "6"
+  case five = "5"
+  case four = "4"
+  case three = "3"
+  case two = "2"
+
+  // J is wild (joker) but also the lowest card
+  static let order = [A, K, Q, T, nine, eight, seven, six, five, four, three, two, J]
+
+  static func < (lhs: CardLabel, rhs: CardLabel) -> Bool {
+    return order.firstIndex(of: lhs)! < order.firstIndex(of: rhs)!
+  }
+}
+
+// Possible hands: (Strongest to weakest)
+// - Five of a kind (all the same label)
+// - Four of a kind (4 of the same label)
+// - Full house (3 of one label, 2 of another)
+// - Three of a kind (3 of the same label)
+// - Two pair (two of one label, two of another label)
+// - One pair (two of the same label)
+// - High card (all cards have different labels)
+
+// We need an enum that is comparable for each hand type
+enum HandType: Int, Comparable {
+  case fiveOfAKind = 1
+  case fourOfAKind = 2
+  case fullHouse = 3
+  case threeOfAKind = 4
+  case twoPair = 5
+  case onePair = 6
+  case highCard = 7
+
+  static func < (lhs: HandType, rhs: HandType) -> Bool {
+    return lhs.rawValue < rhs.rawValue
+  }
+}
+
+// Hands have two ordering rules.
+// Primary - Strongest to wekaest hand type
+// Fallback (for equal hands) - Label from left to right highest to lowest
+// - 33332 is higher than 2AAAA
+// - 77888 is higher than 77788
+
+// Sequences of cards should also be comparable
+extension Sequence where Element == CardLabel {
+  static func < (lhs: Self, rhs: Self) -> Bool {
+    // Compared left to right until we find a difference
+    for (left, right) in zip(lhs, rhs) {
+      if left != right {
+        return left < right
+      }
+    }
+
+    // If we get here, all the cards are the same
+    return false
+  }
+}
+
+// We will get X hands as input. Along with each hand we will get a bid amount
+// for that hand. Each hand is ranked by it's order, so the lowest hand is
+// ranked 1, the next is 2, etc. The highest hand is ranked X. The bid amount
+// for each hand is multiplied by the rank of that hand. The total winnings
+// are the sum of the winnings for each hand.
+
+// We need a hand that is comparable based off it's hand type and card labels
+// It should identify the hand type by the cards in the hand
+
+struct Hand: Comparable {
+  let cards: [CardLabel]
+  let bid: Int
+  let type: HandType
+
+  init(cards: [CardLabel], bid: Int) {
+    self.cards = cards
+    self.bid = bid
+    self.type = Hand.determineHandType(cards: cards)
+  }
+
+  static func < (lhs: Hand, rhs: Hand) -> Bool {
+    if lhs.type == rhs.type {
+      return lhs.cards < rhs.cards
+    }
+
+    return lhs.type < rhs.type
+  }
+
+  static func determineHandType(cards: [CardLabel]) -> HandType {
+    let labels = cards.map { $0.rawValue }
+    let wildCardCount = labels.filter { $0 == "J" }.count
+    let nonWildCards = labels.filter { $0 != "J" }
+    let labelSet = Set(nonWildCards)
+    var labelCounts = labelSet.map { label in
+      return nonWildCards.filter { $0 == label }.count
+    }
+
+    // Distribute wild cards to form the best hand
+    if wildCardCount > 0 {
+      for _ in 1...wildCardCount {
+        if let maxIndex = labelCounts.indices.max(by: { labelCounts[$0] < labelCounts[$1] }) {
+          labelCounts[maxIndex] += 1
+        } else {
+          // If there are no non-wild cards, treat each wild card as a separate rank
+          labelCounts.append(1)
+        }
+      }
+    }
+
+    let sortedCounts = labelCounts.sorted(by: >)
+
+    switch sortedCounts {
+    case [5]:
+      return .fiveOfAKind
+    case [4, 1]:
+      return .fourOfAKind
+    case [3, 2]:
+      return .fullHouse
+    case [3, 1, 1]:
+      return .threeOfAKind
+    case [2, 2, 1]:
+      return .twoPair
+    case [2, 1, 1, 1]:
+      return .onePair
+    default:
+      return .highCard
+    }
+  }
+}
+
+// Hands should be printable including their cards, type and bid
+extension Hand: CustomStringConvertible {
+  var description: String {
+    let cardString = cards.map { $0.rawValue }.joined(separator: "")
+    return "Cards: \(cardString), Type: \(type), Bid: \(bid)"
+  }
+}
+
+// --- Game logic
+
 let path = "part2/question.txt"
 let contents = try String(contentsOfFile: path, encoding: .utf8)
 
-// Input format:
-// Time:      7  15   30
-// Distance:  9  40  200
+// Each line is a hand followed by a bind amount in this format
+// 32T3K 765
+// T55J5 684
+// KK677 28
+// KTJJT 220
+// QQQJA 483
 
-// Longer input format:
-// Time:        61     67     75     71
-// Distance:   430   1036   1307   1150
-
-let lines = contents.components(separatedBy: "\n")
-var timeColumns = lines[0].trimmingCharacters(in: .whitespaces).components(separatedBy: "  ")
-var distanceColumns = lines[1].trimmingCharacters(in: .whitespaces).components(separatedBy: "  ")
-
-// Remove the "Time:" and "Distance:" headers
-timeColumns.removeFirst()
-distanceColumns.removeFirst()
-
-// Remove empty spaces
-timeColumns = timeColumns.filter { !$0.isEmpty }
-distanceColumns = distanceColumns.filter { !$0.isEmpty }
-
-// Trime whitespace
-timeColumns = timeColumns.map { $0.trimmingCharacters(in: .whitespaces) }
-distanceColumns = distanceColumns.map { $0.trimmingCharacters(in: .whitespaces) }
-
-let times = timeColumns.map { Int($0) }
-let distances = distanceColumns.map { Int($0) }
-
-// Units are in milliseconds and millimeters
-let races = zip(distances, times).map { distance, time in
-  (totalRaceTime: time, distanceRecord: distance)
+// Go through each line and extract the strings
+let lines = contents.split(separator: "\n")
+let hands = lines.map { line -> Hand in
+  let parts = line.split(separator: " ")
+  let cards = parts[0].map { CardLabel(rawValue: String($0))! }
+  let bid = Int(parts[1])!
+  return Hand(cards: cards, bid: bid)
 }
 
-print("\(races)")
+// Sort the hands by their rank
+let sortedHands = hands.sorted()
 
-var allWaysToBeatRecord = 1
-for race in races {
-  // For each race I can spend time at the start of the race holding down the
-  // button to charge up my speed. I increase in speed by 1 millimeter per
-  // second for each millisecond of time the button is held. When I release the
-  // button I travel at that speed until the end of the race.
+// Print hands on each line
+sortedHands.forEach { print($0) }
 
-  // If I hold down the button for 5 milliseconds, I'll be going 5 millimeters
-  // but if the race is only 7 milliseconds long, I'll only travel 10 millimeters
-  // in the remaining 2 milliseconds.
+// Calculate the winnings
+let winnings = sortedHands.enumerated().map { (index, hand) -> Int in
+  return hand.bid * (sortedHands.count - index)
+}.reduce(0, +)
 
-  // So the disntance I go is the multiplication of the time I hold down the
-  // button and the time I travel at that speed. The length of time I can hold
-  // added up with the remaining time is the total sum of the race time. So I
-  // could hold for 1 millisecond and travel for 6 milliseconds or hold for 2
-  // milliseconds and travel for 5 milliseconds.
-
-  // I have a distance record I need to beat for each race. I need to figure out
-  // how many different ways I can hold down the button to beat the record.
-
-  // Maybe I can start at this record and finding the number of ways to beat it
-
-  // Assume totalRaceTime and distanceRecord are optional Ints
-  guard let totalRaceTime = race.totalRaceTime, totalRaceTime > 0 else {
-    print("Invalid or missing total race time for race: \(race).")
-    continue
-  }
-
-  guard let distanceRecord = race.distanceRecord else {
-    print("Invalid or missing distance record for race: \(race).")
-    continue
-  }
-
-  var waysToBeatRecord = 0
-
-  for holdTime in 0...totalRaceTime {
-    let speed = holdTime
-    let travelTime = totalRaceTime - holdTime
-    let distanceCovered = speed * travelTime
-
-    if distanceCovered > distanceRecord {
-      waysToBeatRecord += 1
-    }
-  }
-
-  print("Ways to beat record: \(waysToBeatRecord)")
-  allWaysToBeatRecord *= waysToBeatRecord
-}
-
-print("All ways to beat record: \(allWaysToBeatRecord)")
+print("Winnings: \(winnings)")
