@@ -1,6 +1,1 @@
-I followed 15517 instructions to get to ZZZ
-
-________________________________________________________
-Executed in   12.00 millis    fish           external
-   usr time    6.40 millis   90.00 micros    6.31 millis
-   sys time    3.34 millis  687.00 micros    2.65 millis
+The sum of the predictions is 1696140818

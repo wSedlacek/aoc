@@ -1,7 +1,2 @@
-Steps to escape: 14935034899483
-HOW MANY?! God this is gonna take forever. Better get started!
-
-________________________________________________________
-Executed in   24.46 millis    fish           external
-   usr time   19.53 millis   79.00 micros   19.45 millis
-   sys time    3.48 millis  869.00 micros    2.61 millis
+The sum of the predictions is 1696140818
+The sum of the backwards predictions is 1152
