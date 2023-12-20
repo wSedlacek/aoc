@@ -1,188 +1,186 @@
 import Foundation
 
-// Camel Cards! - Poker, but easier to play while riding camels.
-
-// Possible cards are: A, K, Q, J, T, 9, 8, 7, 6, 5, 4, 3, or 2.
-// A is the highest and 2 is the lowest.
-
-// We eed an enum that is comparable for each card label
-
-enum CardLabel: String, Comparable {
-  case A = "A"
-  case K = "K"
-  case Q = "Q"
-  case J = "J"
-  case T = "T"
-  case nine = "9"
-  case eight = "8"
-  case seven = "7"
-  case six = "6"
-  case five = "5"
-  case four = "4"
-  case three = "3"
-  case two = "2"
-
-  // J is wild (joker) but also the lowest card
-  static let order = [A, K, Q, T, nine, eight, seven, six, five, four, three, two, J]
-
-  static func < (lhs: CardLabel, rhs: CardLabel) -> Bool {
-    return order.firstIndex(of: lhs)! < order.firstIndex(of: rhs)!
-  }
-}
-
-// Possible hands: (Strongest to weakest)
-// - Five of a kind (all the same label)
-// - Four of a kind (4 of the same label)
-// - Full house (3 of one label, 2 of another)
-// - Three of a kind (3 of the same label)
-// - Two pair (two of one label, two of another label)
-// - One pair (two of the same label)
-// - High card (all cards have different labels)
-
-// We need an enum that is comparable for each hand type
-enum HandType: Int, Comparable {
-  case fiveOfAKind = 1
-  case fourOfAKind = 2
-  case fullHouse = 3
-  case threeOfAKind = 4
-  case twoPair = 5
-  case onePair = 6
-  case highCard = 7
-
-  static func < (lhs: HandType, rhs: HandType) -> Bool {
-    return lhs.rawValue < rhs.rawValue
-  }
-}
-
-// Hands have two ordering rules.
-// Primary - Strongest to wekaest hand type
-// Fallback (for equal hands) - Label from left to right highest to lowest
-// - 33332 is higher than 2AAAA
-// - 77888 is higher than 77788
-
-// Sequences of cards should also be comparable
-extension Sequence where Element == CardLabel {
-  static func < (lhs: Self, rhs: Self) -> Bool {
-    // Compared left to right until we find a difference
-    for (left, right) in zip(lhs, rhs) {
-      if left != right {
-        return left < right
-      }
-    }
-
-    // If we get here, all the cards are the same
-    return false
-  }
-}
-
-// We will get X hands as input. Along with each hand we will get a bid amount
-// for that hand. Each hand is ranked by it's order, so the lowest hand is
-// ranked 1, the next is 2, etc. The highest hand is ranked X. The bid amount
-// for each hand is multiplied by the rank of that hand. The total winnings
-// are the sum of the winnings for each hand.
-
-// We need a hand that is comparable based off it's hand type and card labels
-// It should identify the hand type by the cards in the hand
-
-struct Hand: Comparable {
-  let cards: [CardLabel]
-  let bid: Int
-  let type: HandType
-
-  init(cards: [CardLabel], bid: Int) {
-    self.cards = cards
-    self.bid = bid
-    self.type = Hand.determineHandType(cards: cards)
-  }
-
-  static func < (lhs: Hand, rhs: Hand) -> Bool {
-    if lhs.type == rhs.type {
-      return lhs.cards < rhs.cards
-    }
-
-    return lhs.type < rhs.type
-  }
-
-  static func determineHandType(cards: [CardLabel]) -> HandType {
-    let labels = cards.map { $0.rawValue }
-    let wildCardCount = labels.filter { $0 == "J" }.count
-    let nonWildCards = labels.filter { $0 != "J" }
-    let labelSet = Set(nonWildCards)
-    var labelCounts = labelSet.map { label in
-      return nonWildCards.filter { $0 == label }.count
-    }
-
-    // Distribute wild cards to form the best hand
-    if wildCardCount > 0 {
-      for _ in 1...wildCardCount {
-        if let maxIndex = labelCounts.indices.max(by: { labelCounts[$0] < labelCounts[$1] }) {
-          labelCounts[maxIndex] += 1
-        } else {
-          // If there are no non-wild cards, treat each wild card as a separate rank
-          labelCounts.append(1)
-        }
-      }
-    }
-
-    let sortedCounts = labelCounts.sorted(by: >)
-
-    switch sortedCounts {
-    case [5]:
-      return .fiveOfAKind
-    case [4, 1]:
-      return .fourOfAKind
-    case [3, 2]:
-      return .fullHouse
-    case [3, 1, 1]:
-      return .threeOfAKind
-    case [2, 2, 1]:
-      return .twoPair
-    case [2, 1, 1, 1]:
-      return .onePair
-    default:
-      return .highCard
-    }
-  }
-}
-
-// Hands should be printable including their cards, type and bid
-extension Hand: CustomStringConvertible {
-  var description: String {
-    let cardString = cards.map { $0.rawValue }.joined(separator: "")
-    return "Cards: \(cardString), Type: \(type), Bid: \(bid)"
-  }
-}
-
-// --- Game logic
-
 let path = "part2/question.txt"
 let contents = try String(contentsOfFile: path, encoding: .utf8)
+let lines = contents.components(separatedBy: "\n").dropLast()
 
-// Each line is a hand followed by a bind amount in this format
-// 32T3K 765
-// T55J5 684
-// KK677 28
-// KTJJT 220
-// QQQJA 483
+// I am lost in a desert! But I have a map! The only problem is that it isn't
+// your typical map. The first line of the map is a list of left and right
+// instructions. In order to stay safe I HAVE to follow these instructions
+// exactly.
 
-// Go through each line and extract the strings
-let lines = contents.split(separator: "\n")
-let hands = lines.map { line -> Hand in
-  let parts = line.split(separator: " ")
-  let cards = parts[0].map { CardLabel(rawValue: String($0))! }
-  let bid = Int(parts[1])!
-  return Hand(cards: cards, bid: bid)
+// Each isntruction is exactly 1 letter of either L or R in a row like LLRLRL
+// THEY AREN'T SEPARATED BY ANYTHING!
+
+let instructions = lines[0].map { String($0) }
+
+// The sequence goes on forever or at least until I reach the end.
+// In swift I can use a sequence to represent this.
+
+let instructionSequence = AnySequence<String> {
+  var index = 0
+  return AnyIterator<String> {
+    if index >= instructions.count {
+      index = 0
+    }
+
+    let next = instructions[index]
+    index += 1
+    return next
+  }
 }
 
-// Sort the hands by their rank
-let sortedHands = hands.sorted()
+// The next part is a table of locations and destinations on the left and right
+// of that location. For example AAA is a location and it has destiionations of
+// (BBB and CCC). Following the instructions I will proceed to the next
+// location.
 
-// Print hands on each line
-sortedHands.forEach { print($0) }
+// Each line starting on the 3rd line looks like AAA = (BBB, CCC)
 
-// Calculate the winnings
-let winnings = sortedHands.enumerated().map { (index, hand) -> Int in
-  return hand.bid * (sortedHands.count - index)
-}.reduce(0, +)
+let locations = lines[2..<lines.count].reduce(into: [String: (String, String)]()) { table, line in
+  let parts = line.components(separatedBy: " = ")
+  let location = parts[0]
 
-print("Winnings: \(winnings)")
+  // I need to remove the ( and the ) from the destinations
+  let destinations = parts[1].dropFirst().dropLast().components(separatedBy: ", ")
+  table[location] = (destinations[0], destinations[1])
+}
+
+// My goal is to find ZZZ as it must be the way out of this haunted desert.
+// But, if I reach the end of the instructions I might not be at ZZZ. If this
+// is the case I must repeat the instructions until I reach ZZZ.
+
+// To make this map better for the next person I will keep track of how many
+// instructions I have followed to get from AAA to ZZZ.
+
+func part1() {
+  var currentLocation = "AAA"
+  var instructionsFollowed = 0
+
+  for instruction in instructionSequence {
+    let (left, right) = locations[currentLocation]!
+    if instruction == "L" {
+      currentLocation = left
+    } else {
+      currentLocation = right
+    }
+
+    instructionsFollowed += 1
+
+    if currentLocation == "ZZZ" {
+      break
+    }
+  }
+
+  // I have finally reached ZZZ! I am free!
+  print("I followed \(instructionsFollowed) instructions to get to ZZZ")
+}
+
+// Wait a minute! I am not free! I am in a loop! I am just back to whare I started!
+
+// Looking closer at the map the nodes aren't just AAA they are 11A and 22A
+// etc. Since this destert is haunted this map must be for GHOST! Since
+// everyone knows ghost can be in more than once place at once. I have to think
+// like that if I am ever going to escape.
+
+// Lets tart by figuring out all the places I am at once. Every place that ends
+// with `A is a place I am at.
+
+var places = locations.keys.filter { $0.hasSuffix("A") }
+
+func part2Forever() {
+  var instructionsFollowed = 0
+
+  // Next I need to follow the instrucrtions updating ALL the places I am at.
+
+  for instruction in instructionSequence {
+    places = places.map { location in
+      let (left, right) = locations[location]!
+      if instruction == "L" {
+        return left
+      } else {
+        return right
+      }
+    }
+
+    instructionsFollowed += 1
+    if places.allSatisfy({ $0.hasSuffix("Z") }) {
+      // I am only free if EVERY place I am ends in Z
+      // EXCEPT, this takes FOREVER. I will never get out of here.
+      // How can I figure this out faster?
+      break
+    }
+  }
+
+  // Now I am really free! No ghost desert can hold me! Now to write the
+  // instructions on the map so no one else gets lost.
+
+  print("I followed \(instructionsFollowed) instructions to get to get EVERY place to end in Z")
+}
+
+// Since that strategy takes forever I need to figure out a better way.
+// I can't simply follow the instructions as written.
+// I could try to work backwards, but I would end up with a sequence of the same length so it will also take forever.
+
+// I need to think about this in a different way.
+
+// Let's try approaching this mathmaticly.
+// I can find the cycle length of each starting point and then I can find the LCM of the cycle lengths.
+
+func findCycleLength(startingPoint: String, locations: [String: (String, String)]) -> Int {
+  var currentLocation = startingPoint
+  var instrunctionCount = 0
+
+  for instrunction in instructionSequence {
+    let (left, right) = locations[currentLocation]!
+    if instrunction == "L" {
+      currentLocation = left
+    } else {
+      currentLocation = right
+    }
+
+    instrunctionCount += 1
+    if currentLocation.hasSuffix("Z") {
+      break
+    }
+  }
+
+  return instrunctionCount
+}
+
+func lcm(_ a: Int, _ b: Int) -> Int {
+  return a / gcd(a, b) * b
+}
+
+func gcd(_ a: Int, _ b: Int) -> Int {
+  var a = a
+  var b = b
+  while b != 0 {
+    let t = b
+    b = a % b
+    a = t
+  }
+  return a
+}
+
+extension Sequence where Element == Int {
+  func greatestCommonDivisor() -> Int? {
+    let numbers = Array(self)
+    guard let first = numbers.first else { return nil }
+
+    return numbers.dropFirst().reduce(first) { gcd($0, $1) }
+  }
+
+  func leastCommonMultiple() -> Int? {
+    let numbers = Array(self)
+    guard let first = numbers.first else { return nil }
+
+    return numbers.dropFirst().reduce(first) { lcm($0, $1) }
+  }
+}
+
+let cycleLengths = places.map { findCycleLength(startingPoint: $0, locations: locations) }
+let stepsToEscape = cycleLengths.leastCommonMultiple()!
+
+print("Steps to escape: \(stepsToEscape)")
+print("HOW MANY?! God this is gonna take forever. Better get started!")
